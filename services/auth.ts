@@ -54,17 +54,42 @@ export const storage = {
   }
 };
 
-// Initialize default users (Admin)
+// Initialize default users (Admin + 2 Members)
 const init = () => {
   const users = storage.getUsers();
-  if (!users.find(u => u.email === 'admin@tapify.co')) {
-    users.push({
+  const defaultAccounts = [
+    {
       id: 'admin-primary',
       email: 'admin@tapify.co',
       password: 'admin',
       isAdmin: true,
       isVerified: true
-    });
+    },
+    {
+      id: 'member-1',
+      email: 'member1@tapify.co',
+      password: 'member1',
+      isAdmin: false,
+      isVerified: true
+    },
+    {
+      id: 'member-2',
+      email: 'member2@tapify.co',
+      password: 'member2',
+      isAdmin: false,
+      isVerified: true
+    }
+  ];
+
+  let updated = false;
+  defaultAccounts.forEach(acc => {
+    if (!users.find(u => u.email === acc.email)) {
+      users.push(acc);
+      updated = true;
+    }
+  });
+
+  if (updated) {
     storage.saveUsers(users);
   }
 };

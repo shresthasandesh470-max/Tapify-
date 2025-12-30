@@ -18,20 +18,34 @@ interface TemplateProps {
 // --- Action Components ---
 
 const SocialLinks = ({ data, color }: { data: BusinessCardData; color: string }) => {
-  const links = [
-    { icon: <Linkedin size={14} />, url: data.linkedin ? `https://linkedin.com/in/${data.linkedin}` : null },
-    { icon: <Twitter size={14} />, url: data.twitter ? `https://twitter.com/${data.twitter}` : null },
-    { icon: <Facebook size={14} />, url: data.facebook || null },
-    { icon: <Instagram size={14} />, url: data.instagram || null },
-    { icon: <MessageCircle size={14} />, url: data.whatsappNumber ? `https://wa.me/${data.whatsappNumber.replace(/\+/g, '')}` : null },
-  ].filter(l => l.url);
+  const allLinks = [
+    { id: 'linkedin', icon: <Linkedin size={14} />, url: data.linkedin ? `https://linkedin.com/in/${data.linkedin}` : null },
+    { id: 'twitter', icon: <Twitter size={14} />, url: data.twitter ? `https://twitter.com/${data.twitter}` : null },
+    { id: 'facebook', id_raw: 'facebook', icon: <Facebook size={14} />, url: data.facebook || null },
+    { id: 'instagram', icon: <Instagram size={14} />, url: data.instagram || null },
+    { id: 'whatsappNumber', icon: <MessageCircle size={14} />, url: data.whatsappNumber ? `https://wa.me/${data.whatsappNumber.replace(/\+/g, '')}` : null },
+  ];
 
-  if (links.length === 0) return null;
+  const filteredLinks = allLinks.filter(l => l.url);
+
+  const sortedLinks = useMemo(() => {
+    if (!data.socialOrder) return filteredLinks;
+    return [...filteredLinks].sort((a, b) => {
+      const indexA = data.socialOrder!.indexOf(a.id);
+      const indexB = data.socialOrder!.indexOf(b.id);
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  }, [filteredLinks, data.socialOrder]);
+
+  if (sortedLinks.length === 0) return null;
 
   return (
     <div className="flex gap-3 items-center mt-3">
-      {links.map((link, idx) => (
-        <a key={idx} href={link.url!} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity" style={{ color }}>
+      {sortedLinks.map((link, idx) => (
+        <a key={link.id} href={link.url!} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity" style={{ color }}>
           {link.icon}
         </a>
       ))}

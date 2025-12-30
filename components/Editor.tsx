@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { Camera, Sun, Moon, Sparkles, Layers, Zap, Palette, FileText, Award, Smartphone, Monitor, Briefcase, Code, Maximize, Scissors, Wallet, ShoppingCart, Globe, Share2, AtSign, MapPin, Hash, Mail, MessageCircle, ExternalLink, Type, Languages, RefreshCw, CreditCard, CheckCircle2, Facebook, Instagram, Image as ImageIcon, Trash2, Download } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+// Fix: Added missing Linkedin and Twitter icons to the lucide-react import list
+import { Camera, Sun, Moon, Sparkles, Layers, Zap, Palette, FileText, Award, Smartphone, Monitor, Briefcase, Code, Maximize, Scissors, Wallet, ShoppingCart, Globe, Share2, AtSign, MapPin, Hash, Mail, MessageCircle, ExternalLink, Type, Languages, RefreshCw, CreditCard, CheckCircle2, Facebook, Instagram, Linkedin, Twitter, Image as ImageIcon, Trash2, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import { BusinessCardData, CardTemplate, CardTheme, CardOrientation, CardLanguage } from '../types';
 import AIImageModifier from './AIImageModifier';
 import { GoogleGenAI } from '@google/genai';
@@ -122,6 +123,34 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
     { id: 'retro', label: 'Retro', icon: <FileText size={14} /> },
     { id: 'gold', label: 'Premium', icon: <Award size={14} /> },
   ];
+
+  const socialPlatforms = [
+    { id: 'linkedin', label: 'LinkedIn', icon: <Linkedin size={14} /> },
+    { id: 'twitter', label: 'Twitter / X', icon: <Twitter size={14} /> },
+    { id: 'facebook', label: 'Facebook', icon: <Facebook size={14} /> },
+    { id: 'instagram', label: 'Instagram', icon: <Instagram size={14} /> },
+    { id: 'whatsappNumber', label: 'WhatsApp', icon: <MessageCircle size={14} /> },
+  ];
+
+  const activeSocials = useMemo(() => {
+    const active = socialPlatforms.filter(p => !!data[p.id as keyof BusinessCardData]);
+    const order = data.socialOrder || socialPlatforms.map(p => p.id);
+    return active.sort((a, b) => {
+      const indexA = order.indexOf(a.id);
+      const indexB = order.indexOf(b.id);
+      return indexA - indexB;
+    });
+  }, [data]);
+
+  const moveSocial = (index: number, direction: 'up' | 'down') => {
+    const newOrder = activeSocials.map(p => p.id);
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+    
+    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+    onChange({ ...data, socialOrder: newOrder });
+    triggerHaptic('light');
+  };
 
   return (
     <div className="space-y-12 pb-20">
@@ -289,6 +318,68 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
         {data.profileImage && <AIImageModifier currentImage={data.profileImage} onUpdate={(img) => onChange({ ...data, profileImage: img })} />}
       </section>
 
+      <section>
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">4. Digital Bridges</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+          {socialPlatforms.map((p) => (
+            <div key={p.id} className="relative">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">{p.icon}</div>
+              <input 
+                name={p.id} 
+                value={(data as any)[p.id] || ''} 
+                onChange={handleChange} 
+                className="w-full bg-white border border-slate-100 rounded-2xl pl-14 pr-5 py-4 text-sm font-bold" 
+                placeholder={p.label} 
+              />
+            </div>
+          ))}
+          <div className="relative">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"><Mail size={18} /></div>
+            <input name="email" value={data.email} onChange={handleChange} className="w-full bg-white border border-slate-100 rounded-2xl pl-14 pr-5 py-4 text-sm font-bold" placeholder="Email" />
+          </div>
+          <div className="relative">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"><Smartphone size={18} /></div>
+            <input name="phone" value={data.phone} onChange={handleChange} className="w-full bg-white border border-slate-100 rounded-2xl pl-14 pr-5 py-4 text-sm font-bold" placeholder="Phone" />
+          </div>
+          <div className="relative">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"><Globe size={18} /></div>
+            <input name="website" value={data.website} onChange={handleChange} className="w-full bg-white border border-slate-100 rounded-2xl pl-14 pr-5 py-4 text-sm font-bold" placeholder="Website" />
+          </div>
+        </div>
+
+        {activeSocials.length > 1 && (
+          <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 mt-6">
+            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-4">Reorder Active Links</h4>
+            <div className="space-y-2">
+              {activeSocials.map((social, index) => (
+                <div key={social.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="text-indigo-600">{social.icon}</div>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{social.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => moveSocial(index, 'up')}
+                      disabled={index === 0}
+                      className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 disabled:opacity-20 transition-colors"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button 
+                      onClick={() => moveSocial(index, 'down')}
+                      disabled={index === activeSocials.length - 1}
+                      className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 disabled:opacity-20 transition-colors"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50">
         <button 
           onClick={handleManualSave}
@@ -301,5 +392,16 @@ const Editor: React.FC<EditorProps> = ({ data, onChange }) => {
     </div>
   );
 };
+
+function triggerHaptic(type: 'light' | 'medium' | 'success' | 'error' = 'light') {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    switch(type) {
+      case 'light': navigator.vibrate(10); break;
+      case 'medium': navigator.vibrate(30); break;
+      case 'success': navigator.vibrate([20, 30, 20]); break;
+      case 'error': navigator.vibrate([50, 50, 50]); break;
+    }
+  }
+}
 
 export default Editor;

@@ -32,6 +32,7 @@ export interface BusinessCardData {
   whatsappNumber?: string;
   orderRedirectUrl?: string;
   isOrderEnabled?: boolean;
+  socialOrder?: string[];
 }
 
 export interface ActivityLog {
