@@ -1,14 +1,9 @@
+
 import { GoogleGenAI } from "@google/genai";
 
-const getAI = () => {
-  // Use API key directly from process.env as per GenAI coding guidelines
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
-};
-
 export async function editImageWithAI(base64Image: string, prompt: string): Promise<string> {
-  const ai = getAI();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Extract base64 data from data URL
   const base64Data = base64Image.split(',')[1];
   const mimeType = base64Image.split(';')[0].split(':')[1];
 

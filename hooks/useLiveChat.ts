@@ -21,7 +21,6 @@ export function useLiveChat(systemInstruction: string) {
   const connect = useCallback(async () => {
     setError(null);
     try {
-      // Use API key directly from process.env as per GenAI coding guidelines
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
       inputAudioContextRef.current = new AudioContext({ sampleRate: 16000 });
@@ -30,10 +29,7 @@ export function useLiveChat(systemInstruction: string) {
       try {
         streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (e: any) {
-        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-          throw new Error("Microphone permission denied. Please enable it in your browser settings.");
-        }
-        throw e;
+        throw new Error("Microphone permission denied. Please enable it for the AI Consultant.");
       }
 
       const sessionPromise = ai.live.connect({
@@ -56,6 +52,7 @@ export function useLiveChat(systemInstruction: string) {
             scriptProcessor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
               const pcmBlob = createPcmBlob(inputData);
+              // CRITICAL: Rely on sessionPromise for data streaming
               sessionPromise.then(s => s.sendRealtimeInput({ media: pcmBlob }));
             };
 
@@ -72,7 +69,9 @@ export function useLiveChat(systemInstruction: string) {
             if (message.serverContent?.turnComplete) {
               const i = currentInputRef.current;
               const o = currentOutputRef.current;
-              setTranscription(prev => [...prev, `User: ${i}`, `AI: ${o}`]);
+              if (i || o) {
+                setTranscription(prev => [...prev, `User: ${i}`, `AI: ${o}`]);
+              }
               currentInputRef.current = '';
               currentOutputRef.current = '';
             }
@@ -92,7 +91,9 @@ export function useLiveChat(systemInstruction: string) {
             }
 
             if (message.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => s.stop());
+              sourcesRef.current.forEach(s => {
+                try { s.stop(); } catch(e) {}
+              });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
@@ -100,7 +101,7 @@ export function useLiveChat(systemInstruction: string) {
           onclose: () => setIsConnected(false),
           onerror: (e) => {
             console.error("Live Socket Error:", e);
-            setError("Connection error. Please try again.");
+            setError("Connection interrupted.");
           },
         }
       });
@@ -114,9 +115,14 @@ export function useLiveChat(systemInstruction: string) {
   }, [systemInstruction]);
 
   const disconnect = useCallback(() => {
-    if (sessionRef.current) sessionRef.current.close();
-    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (sessionRef.current) {
+      try { sessionRef.current.close(); } catch(e) {}
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
     setIsConnected(false);
+    sessionRef.current = null;
   }, []);
 
   return { isConnected, connect, disconnect, transcription, error };
