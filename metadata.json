@@ -1,0 +1,8 @@
+{
+  "name": "TAPIFY",
+  "description": "The ultimate AI-enhanced digital business card platform. Design your identity, use Gemini AI for smart profile editing, and share instantly with NFC and QR.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
