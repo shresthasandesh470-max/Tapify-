@@ -1,19 +1,37 @@
 
 import { User, BusinessCardData, ActivityLog } from '../types';
 
-const USERS_KEY = 'nfc_users';
-const CARDS_KEY = 'nfc_cards';
-const CURRENT_USER_KEY = 'nfc_current_user';
-const LOGS_KEY = 'tapify_activity_logs';
+const USERS_KEY = 'tapify_users_v1';
+const CARDS_KEY = 'tapify_cards_v1';
+const CURRENT_USER_KEY = 'tapify_session_v1';
+const LOGS_KEY = 'tapify_activity_logs_v1';
 
 export const storage = {
-  getUsers: (): User[] => JSON.parse(localStorage.getItem(USERS_KEY) || '[]'),
+  getUsers: (): User[] => {
+    try {
+      return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  },
   saveUsers: (users: User[]) => localStorage.setItem(USERS_KEY, JSON.stringify(users)),
   
-  getCards: (): BusinessCardData[] => JSON.parse(localStorage.getItem(CARDS_KEY) || '[]'),
+  getCards: (): BusinessCardData[] => {
+    try {
+      return JSON.parse(localStorage.getItem(CARDS_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  },
   saveCards: (cards: BusinessCardData[]) => localStorage.setItem(CARDS_KEY, JSON.stringify(cards)),
   
-  getLogs: (): ActivityLog[] => JSON.parse(localStorage.getItem(LOGS_KEY) || '[]'),
+  getLogs: (): ActivityLog[] => {
+    try {
+      return JSON.parse(localStorage.getItem(LOGS_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  },
   saveLogs: (logs: ActivityLog[]) => localStorage.setItem(LOGS_KEY, JSON.stringify(logs)),
   
   addLog: (log: Omit<ActivityLog, 'id' | 'timestamp'>) => {
@@ -23,7 +41,7 @@ export const storage = {
       id: 'log_' + Math.random().toString(36).substr(2, 9),
       timestamp: Date.now()
     };
-    storage.saveLogs([newLog, ...logs].slice(0, 1000)); // Keep last 1000 logs
+    storage.saveLogs([newLog, ...logs].slice(0, 1000));
   },
   
   getCurrentUser: (): User | null => {
@@ -36,15 +54,16 @@ export const storage = {
   }
 };
 
-// Initialize Admin
+// Initialize default users (Admin)
 const init = () => {
   const users = storage.getUsers();
-  if (!users.find(u => u.email === 'admin@nfc.com')) {
+  if (!users.find(u => u.email === 'admin@tapify.co')) {
     users.push({
-      id: 'admin-id',
-      email: 'admin@nfc.com',
+      id: 'admin-primary',
+      email: 'admin@tapify.co',
       password: 'admin',
-      isAdmin: true
+      isAdmin: true,
+      isVerified: true
     });
     storage.saveUsers(users);
   }
