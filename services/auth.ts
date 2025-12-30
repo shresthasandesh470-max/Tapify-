@@ -5,6 +5,7 @@ const USERS_KEY = 'tapify_users_v1';
 const CARDS_KEY = 'tapify_cards_v1';
 const CURRENT_USER_KEY = 'tapify_session_v1';
 const LOGS_KEY = 'tapify_activity_logs_v1';
+const WALLET_KEY = 'tapify_wallet_v1';
 
 export const storage = {
   getUsers: (): User[] => {
@@ -24,6 +25,32 @@ export const storage = {
     }
   },
   saveCards: (cards: BusinessCardData[]) => localStorage.setItem(CARDS_KEY, JSON.stringify(cards)),
+  
+  getSavedCards: (): BusinessCardData[] => {
+    try {
+      return JSON.parse(localStorage.getItem(WALLET_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  },
+  saveToWallet: (card: BusinessCardData) => {
+    const cards = storage.getSavedCards();
+    if (!cards.find(c => c.id === card.id)) {
+      storage.saveLogs([{
+        id: 'wallet_' + Date.now(),
+        userId: 'guest',
+        userEmail: 'guest',
+        action: 'NFC_WRITE',
+        details: `Card ${card.name} saved to local wallet.`,
+        timestamp: Date.now()
+      } as ActivityLog, ...storage.getLogs()]);
+      localStorage.setItem(WALLET_KEY, JSON.stringify([...cards, card]));
+    }
+  },
+  removeFromWallet: (id: string) => {
+    const cards = storage.getSavedCards().filter(c => c.id !== id);
+    localStorage.setItem(WALLET_KEY, JSON.stringify(cards));
+  },
   
   getLogs: (): ActivityLog[] => {
     try {

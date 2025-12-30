@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogOut, User as UserIcon, Settings, Share2, ShieldCheck, Database, Layout as LayoutIcon, Wand2, Edit3, Eye, LogIn, UserPlus, Mail, Shield, CheckCircle2, ArrowRight, RefreshCw, Smartphone, AlertCircle, X, ShieldAlert, FileText, Lock, Download, UserPlus2, KeyRound, Radio, ShieldPlus, Zap } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, Share2, ShieldCheck, Database, Layout as LayoutIcon, Wand2, Edit3, Eye, LogIn, UserPlus, Mail, Shield, CheckCircle2, ArrowRight, RefreshCw, Smartphone, AlertCircle, X, ShieldAlert, FileText, Lock, Download, UserPlus2, KeyRound, Radio, ShieldPlus, Zap, Wallet, Trash2, ChevronRight } from 'lucide-react';
 import BusinessCard from './components/BusinessCard';
 import Editor from './components/Editor';
 import AdminDashboard from './components/AdminDashboard';
@@ -86,7 +86,14 @@ const Label = ({ children, htmlFor, className = "" }: any) => (
   <label htmlFor={htmlFor} className={`text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 ${className}`}>{children}</label>
 );
 
-const PublicProfile = ({ data, isOffline = false }: { data: BusinessCardData; isOffline?: boolean }) => {
+const PublicProfile = ({ data, isOffline = false, onBack }: { data: BusinessCardData; isOffline?: boolean; onBack?: () => void }) => {
+  const [isSavedInWallet, setIsSavedInWallet] = useState(false);
+
+  useEffect(() => {
+    const saved = storage.getSavedCards();
+    if (saved.find(c => c.id === data.id)) setIsSavedInWallet(true);
+  }, [data.id]);
+
   const downloadVCard = () => {
     triggerHaptic('success');
     const vCardString = [
@@ -114,8 +121,19 @@ const PublicProfile = ({ data, isOffline = false }: { data: BusinessCardData; is
     window.URL.revokeObjectURL(url);
   };
 
+  const saveToWallet = () => {
+    triggerHaptic('success');
+    storage.saveToWallet(data);
+    setIsSavedInWallet(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 relative">
+      {onBack && (
+        <button onClick={onBack} className="absolute top-8 left-8 p-3 bg-white shadow-xl rounded-full text-slate-900 hover:scale-110 transition-transform">
+          <ArrowRight className="rotate-180" size={24} />
+        </button>
+      )}
       <div className="w-full max-w-xl flex flex-col items-center">
         <div className="flex flex-col items-center gap-3 text-center mb-12">
           <TapifyLogo className="w-12 h-12" iconSize={24} />
@@ -132,9 +150,21 @@ const PublicProfile = ({ data, isOffline = false }: { data: BusinessCardData; is
         <div className="w-full drop-shadow-[0_40px_100px_rgba(79,70,229,0.12)] mb-12">
           <BusinessCard data={data} scale={1} />
         </div>
-        <button onClick={downloadVCard} className="w-full max-w-xs h-16 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl flex items-center justify-center gap-3 hover:bg-black transition-all">
-          <UserPlus2 size={18} /> Save to Contacts
-        </button>
+        
+        <div className="w-full max-w-xs space-y-3">
+          <button onClick={downloadVCard} className="w-full h-16 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl flex items-center justify-center gap-3 hover:bg-black transition-all">
+            <UserPlus2 size={18} /> Save to Contacts
+          </button>
+          <button 
+            onClick={saveToWallet} 
+            disabled={isSavedInWallet}
+            className={`w-full h-16 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all ${isSavedInWallet ? 'bg-indigo-50 text-indigo-600 cursor-default' : 'bg-white border-2 border-slate-900 text-slate-900 hover:bg-slate-50 shadow-xl'}`}
+          >
+            {isSavedInWallet ? <CheckCircle2 size={18} /> : <Wallet size={18} />}
+            {isSavedInWallet ? 'Saved in Wallet' : 'Add to Wallet'}
+          </button>
+        </div>
+
         <div className="mt-8 flex flex-col items-center gap-2">
             <a href={window.location.origin} className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-indigo-600 transition-colors">
             Authorized <span className="text-indigo-600">Tapify</span> Identity
@@ -173,8 +203,6 @@ const App: React.FC = () => {
             const encoded = hash.split('#off=')[1];
             const decodedJson = JSON.parse(decodeURIComponent(escape(atob(encoded))));
             
-            // Map compressed keys back to BusinessCardData structure
-            // Fix: Added missing required 'address' property
             const hydratedCard: BusinessCardData = {
                 id: 'offline_' + Math.random().toString(36).substr(2, 5),
                 userId: 'offline',
@@ -295,7 +323,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (publicCard) return <PublicProfile data={publicCard} isOffline={isOfflineView} />;
+  if (publicCard) return <PublicProfile data={publicCard} isOffline={isOfflineView} onBack={isOfflineView ? () => { setPublicCard(null); window.location.hash = ''; } : undefined} />;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans relative overflow-hidden safe-bottom">

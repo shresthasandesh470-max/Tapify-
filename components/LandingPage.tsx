@@ -1,8 +1,9 @@
 
-import React from 'react';
-import { Zap, Smartphone, Wand2, ShieldCheck, ArrowRight, LogIn, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, Smartphone, Wand2, ShieldCheck, ArrowRight, LogIn, Lock, Wallet, Trash2, ChevronRight, User } from 'lucide-react';
 import BusinessCard from './BusinessCard';
 import { BusinessCardData } from '../types';
+import { storage } from '../services/auth';
 import { TapifyLogo } from '../App';
 
 interface LandingPageProps {
@@ -10,6 +11,13 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
+  const [savedCards, setSavedCards] = useState<BusinessCardData[]>([]);
+  const [selectedWalletCard, setSelectedWalletCard] = useState<BusinessCardData | null>(null);
+
+  useEffect(() => {
+    setSavedCards(storage.getSavedCards());
+  }, []);
+
   const demoCard: BusinessCardData = {
     id: 'demo',
     userId: 'demo',
@@ -30,6 +38,47 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     bio: 'Crafting the next generation of professional connectivity.',
     createdAt: Date.now()
   };
+
+  const removeCard = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Remove from wallet?')) {
+      storage.removeFromWallet(id);
+      setSavedCards(storage.getSavedCards());
+    }
+  };
+
+  if (selectedWalletCard) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto">
+        <div className="p-8 max-w-xl mx-auto flex flex-col items-center justify-center min-h-screen">
+          <button 
+            onClick={() => setSelectedWalletCard(null)}
+            className="self-start mb-12 p-3 bg-white shadow-xl rounded-full text-slate-900 hover:scale-110 transition-transform"
+          >
+            <ArrowRight className="rotate-180" size={24} />
+          </button>
+          <div className="w-full drop-shadow-[0_40px_100px_rgba(79,70,229,0.12)] mb-12">
+            <BusinessCard data={selectedWalletCard} scale={1} />
+          </div>
+          <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.4em] mb-4">Offline Wallet Sync</p>
+          <div className="w-full flex gap-3">
+             <a 
+              href={`mailto:${selectedWalletCard.email}`}
+              className="flex-1 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-100"
+             >
+               Contact via Email
+             </a>
+             <button 
+              onClick={() => setSelectedWalletCard(null)}
+              className="flex-1 h-14 bg-white border border-slate-200 text-slate-900 rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-widest shadow-sm"
+             >
+               Close Wallet
+             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-indigo-100">
@@ -71,6 +120,54 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           </div>
         </div>
       </header>
+
+      {savedCards.length > 0 && (
+        <section className="bg-indigo-600 py-20 px-6 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full -mr-32 -mt-32"></div>
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-12">
+               <div>
+                 <div className="flex items-center gap-3 text-white/60 mb-2">
+                   <Wallet size={18} />
+                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em]">My Digital Wallet</h3>
+                 </div>
+                 <h2 className="text-4xl font-black text-white tracking-tight uppercase">Saved Identities</h2>
+               </div>
+               <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center text-white font-black">
+                 {savedCards.length}
+               </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {savedCards.map(card => (
+                <div 
+                  key={card.id} 
+                  onClick={() => setSelectedWalletCard(card)}
+                  className="bg-white/10 backdrop-blur-md border border-white/20 rounded-[2.5rem] p-6 hover:bg-white/20 transition-all cursor-pointer group flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl shrink-0">
+                      <img src={card.profileImage} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <p className="text-white font-black uppercase text-sm tracking-tight">{card.name}</p>
+                      <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest truncate max-w-[120px]">{card.title}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => removeCard(card.id, e)}
+                      className="p-3 text-white/30 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <ChevronRight className="text-white/40 group-hover:translate-x-1 transition-transform" size={20} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="bg-slate-50 py-32 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16 md:gap-32">
