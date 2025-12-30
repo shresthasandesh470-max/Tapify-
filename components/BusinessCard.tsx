@@ -21,7 +21,7 @@ const SocialLinks = ({ data, color }: { data: BusinessCardData; color: string })
   const allLinks = [
     { id: 'linkedin', icon: <Linkedin size={14} />, url: data.linkedin ? `https://linkedin.com/in/${data.linkedin}` : null },
     { id: 'twitter', icon: <Twitter size={14} />, url: data.twitter ? `https://twitter.com/${data.twitter}` : null },
-    { id: 'facebook', id_raw: 'facebook', icon: <Facebook size={14} />, url: data.facebook || null },
+    { id: 'facebook', icon: <Facebook size={14} />, url: data.facebook || null },
     { id: 'instagram', icon: <Instagram size={14} />, url: data.instagram || null },
     { id: 'whatsappNumber', icon: <MessageCircle size={14} />, url: data.whatsappNumber ? `https://wa.me/${data.whatsappNumber.replace(/\+/g, '')}` : null },
   ];
@@ -129,7 +129,7 @@ const ModernCard: React.FC<TemplateProps> = ({ data, themeStyles }) => {
   );
 };
 
-// --- Executive/Tech/Other Templates Updated with Z-indexing ---
+// --- Executive/Tech/Other Templates ---
 
 const ExecutiveCard: React.FC<TemplateProps> = ({ data, themeStyles }) => (
   <div className={`relative w-full h-full flex flex-col items-center justify-center p-10 text-center ${themeStyles.container}`}>
@@ -316,8 +316,35 @@ const ClassicCard: React.FC<TemplateProps> = ({ data, themeStyles }) => (
 
 // --- Card Back Component ---
 const CardBack: React.FC<{ data: BusinessCardData; themeStyles: any }> = ({ data, themeStyles }) => {
-  const shareUrl = window.location.origin + '?card=' + data.id;
+  // Offline-optimized QR: Encode essential card data in the URL hash
+  const offlineData = useMemo(() => {
+    const essential = {
+      n: data.name,
+      t: data.title,
+      c: data.company,
+      e: data.email,
+      p: data.phone,
+      w: data.website,
+      l: data.linkedin,
+      tw: data.twitter,
+      f: data.facebook,
+      i: data.instagram,
+      wh: data.whatsappNumber,
+      // Fix: Include missing address in offline sync object
+      a: data.address,
+      tc: data.themeColor,
+      te: data.template,
+      th: data.theme,
+      o: data.orientation,
+      b: data.bio,
+      pi: data.profileImage.startsWith('http') ? data.profileImage : null // Exclude large local base64 images to keep QR small
+    };
+    return btoa(unescape(encodeURIComponent(JSON.stringify(essential))));
+  }, [data]);
+
+  const shareUrl = `${window.location.origin}/#off=${offlineData}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=20&data=${encodeURIComponent(shareUrl)}`;
+
   return (
     <div className={`relative w-full h-full flex flex-col items-center justify-center p-10 text-center ${themeStyles.container}`}>
       <CardBackdrop data={data} />
@@ -328,8 +355,14 @@ const CardBack: React.FC<{ data: BusinessCardData; themeStyles: any }> = ({ data
             <img src={qrUrl} alt="QR Code" className="w-32 h-32" />
           </div>
         </div>
-        <p className={`text-[10px] font-black uppercase tracking-[0.4em] mt-8 mb-2 ${themeStyles.textPrimary}`}>Digital Passport</p>
-        <p className={`text-[8px] font-bold uppercase tracking-widest opacity-40 ${themeStyles.textSecondary}`}>Scan to Synchronize Profile</p>
+        <div className="flex flex-col items-center mt-8 gap-2">
+            <div className="px-3 py-1 bg-green-500/10 rounded-full flex items-center gap-2">
+                <CheckCircle2 size={10} className="text-green-500" />
+                <span className="text-[8px] font-black uppercase tracking-widest">Sync-Ready Offline Data</span>
+            </div>
+            <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${themeStyles.textPrimary}`}>Digital Passport</p>
+            <p className={`text-[8px] font-bold uppercase tracking-widest opacity-40 ${themeStyles.textSecondary}`}>Scan to Instantly Hydrate Profile</p>
+        </div>
         <div className="flex gap-4 mt-8 opacity-20 justify-center">
           <Scan size={18} />
           <Globe size={18} />

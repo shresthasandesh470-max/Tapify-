@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LogOut, User as UserIcon, Settings, Share2, ShieldCheck, Database, Layout as LayoutIcon, Wand2, Edit3, Eye, LogIn, UserPlus, Mail, Shield, CheckCircle2, ArrowRight, RefreshCw, Smartphone, AlertCircle, X, ShieldAlert, FileText, Lock, Download, UserPlus2, KeyRound, Radio, ShieldPlus } from 'lucide-react';
+import { LogOut, User as UserIcon, Settings, Share2, ShieldCheck, Database, Layout as LayoutIcon, Wand2, Edit3, Eye, LogIn, UserPlus, Mail, Shield, CheckCircle2, ArrowRight, RefreshCw, Smartphone, AlertCircle, X, ShieldAlert, FileText, Lock, Download, UserPlus2, KeyRound, Radio, ShieldPlus, Zap } from 'lucide-react';
 import BusinessCard from './components/BusinessCard';
 import Editor from './components/Editor';
 import AdminDashboard from './components/AdminDashboard';
@@ -86,7 +86,7 @@ const Label = ({ children, htmlFor, className = "" }: any) => (
   <label htmlFor={htmlFor} className={`text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 ${className}`}>{children}</label>
 );
 
-const PublicProfile = ({ data }: { data: BusinessCardData }) => {
+const PublicProfile = ({ data, isOffline = false }: { data: BusinessCardData; isOffline?: boolean }) => {
   const downloadVCard = () => {
     triggerHaptic('success');
     const vCardString = [
@@ -119,7 +119,15 @@ const PublicProfile = ({ data }: { data: BusinessCardData }) => {
       <div className="w-full max-w-xl flex flex-col items-center">
         <div className="flex flex-col items-center gap-3 text-center mb-12">
           <TapifyLogo className="w-12 h-12" iconSize={24} />
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">Verified Identity</p>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">Verified Identity</p>
+            {isOffline && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full">
+                    <Zap size={10} fill="currentColor" />
+                    <span className="text-[8px] font-black uppercase tracking-widest">Instant Sync Active</span>
+                </div>
+            )}
+          </div>
         </div>
         <div className="w-full drop-shadow-[0_40px_100px_rgba(79,70,229,0.12)] mb-12">
           <BusinessCard data={data} scale={1} />
@@ -127,9 +135,12 @@ const PublicProfile = ({ data }: { data: BusinessCardData }) => {
         <button onClick={downloadVCard} className="w-full max-w-xs h-16 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl flex items-center justify-center gap-3 hover:bg-black transition-all">
           <UserPlus2 size={18} /> Save to Contacts
         </button>
-        <a href={window.location.origin} className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-indigo-600 transition-colors pt-8">
-          Authorized <span className="text-indigo-600">Tapify</span> Identity
-        </a>
+        <div className="mt-8 flex flex-col items-center gap-2">
+            <a href={window.location.origin} className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-indigo-600 transition-colors">
+            Authorized <span className="text-indigo-600">Tapify</span> Identity
+            </a>
+            {isOffline && <p className="text-[8px] font-bold text-slate-300 uppercase">Loaded from Physical Scan Data</p>}
+        </div>
       </div>
     </div>
   );
@@ -143,6 +154,7 @@ const App: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<BusinessCardData | null>(null);
   const [publicCard, setPublicCard] = useState<BusinessCardData | null>(null);
+  const [isOfflineView, setIsOfflineView] = useState(false);
 
   // Auth States
   const [email, setEmail] = useState('');
@@ -154,6 +166,49 @@ const App: React.FC = () => {
   );
 
   useEffect(() => {
+    // 1. Check for offline data in hash first (Highest priority for "Offline Scan")
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#off=')) {
+        try {
+            const encoded = hash.split('#off=')[1];
+            const decodedJson = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+            
+            // Map compressed keys back to BusinessCardData structure
+            // Fix: Added missing required 'address' property
+            const hydratedCard: BusinessCardData = {
+                id: 'offline_' + Math.random().toString(36).substr(2, 5),
+                userId: 'offline',
+                name: decodedJson.n,
+                title: decodedJson.t,
+                company: decodedJson.c,
+                email: decodedJson.e,
+                phone: decodedJson.p,
+                website: decodedJson.w,
+                linkedin: decodedJson.l,
+                twitter: decodedJson.tw,
+                facebook: decodedJson.f,
+                instagram: decodedJson.i,
+                whatsappNumber: decodedJson.wh,
+                address: decodedJson.a || '',
+                themeColor: decodedJson.tc || '#6366f1',
+                template: decodedJson.te || 'modern',
+                theme: decodedJson.th || 'light',
+                orientation: decodedJson.o || 'landscape',
+                bio: decodedJson.b,
+                profileImage: decodedJson.pi || 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=400&h=400&fit=crop',
+                createdAt: Date.now()
+            };
+            
+            setPublicCard(hydratedCard);
+            setIsOfflineView(true);
+            setIsAppLoading(false);
+            return;
+        } catch (e) {
+            console.error("Failed to decode offline data", e);
+        }
+    }
+
+    // 2. Fallback to card ID lookup
     const params = new URLSearchParams(window.location.search);
     const cardId = params.get('card');
     if (cardId) {
@@ -161,6 +216,7 @@ const App: React.FC = () => {
       const card = allCards.find(c => c.id === cardId);
       if (card) setPublicCard(card);
     }
+    
     const timer = setTimeout(() => setIsAppLoading(false), 1200);
     return () => clearTimeout(timer);
   }, []);
@@ -239,7 +295,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (publicCard) return <PublicProfile data={publicCard} />;
+  if (publicCard) return <PublicProfile data={publicCard} isOffline={isOfflineView} />;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans relative overflow-hidden safe-bottom">
